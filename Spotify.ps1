@@ -63,7 +63,7 @@ public static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam)
 #Add the SendMessage function as a static method of a class
 $SendMessage = Add-Type -MemberDefinition $signature -Name "Win32SendMessage" -Namespace Win32Functions -PassThru
 #Invoke the SendMessage Function
-$SendMessage::SendMessage($spotifyProcess.MainWindowHandle, 0x0319, 0, $command)
+$result = $SendMessage::SendMessage($spotifyProcess.MainWindowHandle, 0x0319, 0, $command)
 
 }
 
