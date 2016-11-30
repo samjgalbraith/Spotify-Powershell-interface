@@ -4,6 +4,17 @@ $SPOTIFY_STOP = 851968
 $SPOTIFY_PREVIOUS = 786432
 $SPOTIFY_NEXT = 720896
 
+function StartSpotifyIfNeeded()
+{
+    $programName = "Spotify"
+    $spotifyPath = Join-Path -Path $env:USERPROFILE -ChildPath "AppData\Roaming\Spotify\Spotify.exe"
+    $isRunning = (Get-Process | Where-Object { $_.Name -eq $programName }).Count -gt 0
+
+    if (-not $isRunning){
+        & $spotifyPath
+        Start-Sleep 2
+    }
+}
 
 function NextSong(){
 
@@ -49,7 +60,6 @@ $signature = @"
 [DllImport("user32.dll")]
 public static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);
 "@
-
 #Add the SendMessage function as a static method of a class
 $SendMessage = Add-Type -MemberDefinition $signature -Name "Win32SendMessage" -Namespace Win32Functions -PassThru
 #Invoke the SendMessage Function
@@ -62,7 +72,7 @@ function updateToast(){
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
 [xml]$toastXml =  ([Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastImageAndText04)).GetXml()
 
-$songTitle = Get-Process |where {$_.mainWindowTItle -and $_.name -eq "Spotify"} |select mainwindowtitle
+$songTitle = Get-Process |where {$_.mainWindowTitle -and $_.name -eq "Spotify"} | select mainwindowtitle
 
         $artist = $songTitle.MainWindowTitle.Split("-")[0]
         $song = $songTitle.MainWindowTitle.Split("-")[1]
@@ -95,6 +105,8 @@ $songTitle = Get-Process |where {$_.mainWindowTItle -and $_.name -eq "Spotify"} 
     }
 
 $option=$args[0]
+
+StartSpotifyIfNeeded
 
 switch ($option) 
     { 
