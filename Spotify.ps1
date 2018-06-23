@@ -1,19 +1,41 @@
-﻿$SPOTIFY_PLAYPAUSE =917504
+param([switch] $DontStartSpotify)
+
+$SPOTIFY_PLAYPAUSE =917504
 $SPOTIFY_MUTE = 524288
 $SPOTIFY_STOP = 851968
 $SPOTIFY_PREVIOUS = 786432
 $SPOTIFY_NEXT = 720896
 
+$SPOTIFY_PROCESS_NAME = "Spotify"
+$SPOTIFY_NOTHING_PLAYING_WINDOW_TITLE = "Spotify"
+
+function IsSpotifyRunning()
+{
+    (Get-Process | Where-Object { $_.Name -eq $SPOTIFY_PROCESS_NAME }).Count -gt 0
+}
+
 function StartSpotifyIfNeeded()
 {
-    $programName = "Spotify"
+    if($DontStartSpotify){
+        return
+    }
+    
     $spotifyPath = Join-Path -Path $env:USERPROFILE -ChildPath "AppData\Roaming\Spotify\Spotify.exe"
-    $isRunning = (Get-Process | Where-Object { $_.Name -eq $programName }).Count -gt 0
 
-    if (-not $isRunning){
+    if(-not $(IsSpotifyRunning)){
         & $spotifyPath
         Start-Sleep 2
     }
+}
+
+function GetSpotifyWindowTitle()
+{
+    $(Get-Process |where {$_.mainWindowTitle -and $_.name -eq $SPOTIFY_PROCESS_NAME} | select mainwindowtitle).MainWindowTitle
+}
+
+function IsPlaying()
+{
+    $(GetSpotifyWindowTitle) -and $(GetSpotifyWindowTitle) -ne $SPOTIFY_NOTHING_PLAYING_WINDOW_TITLE
 }
 
 function NextSong(){
@@ -72,12 +94,12 @@ function updateToast(){
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
 [xml]$toastXml =  ([Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastImageAndText04)).GetXml()
 
-$songTitle = Get-Process |where {$_.mainWindowTitle -and $_.name -eq "Spotify"} | select mainwindowtitle
+        $songTitle = GetSpotifyWindowTitle
 
-        $artist = $songTitle.MainWindowTitle.Split("-")[0]
-        $song = $songTitle.MainWindowTitle.Split("-")[1]
+        $artist = $songTitle.Split("-")[0]
+        $song = $songTitle.Split("-")[1]
 
-        Write-Host $songTitle.MainWindowTitle
+        Write-Host $songTitle
 
         # message to show on toast
         $stringElements = $toastXml.GetElementsByTagName("text")
@@ -107,11 +129,26 @@ $songTitle = Get-Process |where {$_.mainWindowTitle -and $_.name -eq "Spotify"} 
 $option=$args[0]
 
 StartSpotifyIfNeeded
+if(-not $(IsSpotifyRunning))
+{
+    echo "Spotify is not running. Skipping command."
+    return
+}
 
 switch ($option) 
     { 
-        "Play" {PlayPause} 
-        "Pause" {PlayPause} 
+        "Play" {
+            if(-not $(IsPlaying))
+            {
+                PlayPause
+            }
+        } 
+        "Pause" {
+            if($(IsPlaying))
+            {
+                PlayPause
+            }
+        }
         "Replay" {
             RestartSong
             Start-Sleep 1
@@ -130,5 +167,3 @@ switch ($option)
         } 
         default {"Wrong command"}
     }
-
-    
